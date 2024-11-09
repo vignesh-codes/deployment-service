@@ -55,7 +55,7 @@ func GetMongoConnection() *mongo.Client {
 	// )
 
 	// Define client options
-	clientOptions := options.Client().ApplyURI("xx")
+	clientOptions := options.Client().ApplyURI("mongodb+srv://user1:dbUser1PassWord@cluster0.oawjr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 
 	// Establish a connection
 	client, err := mongo.Connect(context.TODO(), clientOptions)

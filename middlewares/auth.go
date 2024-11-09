@@ -2,9 +2,6 @@ package middlewares
 
 import (
 	"deployment-service/apps/repository/adapter"
-	"deployment-service/constants"
-	"deployment-service/utils/response"
-	"fmt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,27 +15,22 @@ type Application struct {
 // for internal apis
 func ValidateHeaderSecrets(repository *adapter.Repository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.Request.Header.Get("x-client-id")
-		secret := c.Request.Header.Get("x-client-secret")
-		if id == "" {
-			status := response.UnAuthorized(string(response.ErrUnauthorized))
-			c.JSON(status.Status(), status)
-			c.Abort()
-			return
-		}
-		if secret == "" {
-			status := response.UnAuthorized(string(response.ErrUnauthorized))
-			c.JSON(status.Status(), status)
-			c.Abort()
-			return
-		}
-		service_name, found := constants.AVAILABLE_SERVICES[fmt.Sprintf("%s:%s", id, secret)]
-		if !found {
-			status := response.UnAuthorized(string(response.ErrUnauthorized))
-			c.JSON(status.Status(), status)
-			c.Abort()
-		}
-		c.Set("event_source", service_name)
+		// id := c.Request.Header.Get("x-client-id")
+		// secret := c.Request.Header.Get("x-client-secret")
+		// if id == "" {
+		// 	status := response.UnAuthorized(string(response.ErrUnauthorized))
+		// 	c.JSON(status.Status(), status)
+		// 	c.Abort()
+		// 	return
+		// }
+		// if secret == "" {
+		// 	status := response.UnAuthorized(string(response.ErrUnauthorized))
+		// 	c.JSON(status.Status(), status)
+		// 	c.Abort()
+		// 	return
+		// }
+		username := c.Request.Header.Get("username")
+		c.Set("username", username)
 		c.Next()
 	}
 }

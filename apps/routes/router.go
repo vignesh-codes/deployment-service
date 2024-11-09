@@ -70,7 +70,7 @@ func (r *Router) SetMode() *Router {
 
 func (r *Router) SetRouters(repository *adapter.Repository) http.Handler {
 	r.setConfigRouters()
-	// r.SetClientRoutes(repository)
+	r.SetClientRoutes(repository)
 	r.SetInternalRoutes(repository)
 	r.router.NoRoute(invalidPathHandler())
 	return r.router

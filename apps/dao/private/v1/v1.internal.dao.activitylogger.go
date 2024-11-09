@@ -25,9 +25,10 @@ func NewEventLoggerDao(repository *adapter.Repository) IEventLoggerDao {
 }
 
 func (dao EventLoggerDao) LogActivity(ctx *gin.Context, payload model_event_logger.Event) {
-	go func(payload model_event_logger.Event) {
-		_ = dao.ServiceRepo.EventLoggerService.LogEvent(payload)
-	}(payload)
-	ctx.JSON(http.StatusOK, map[string]interface{}{"message": payload})
+	var response []map[string]interface{}
+
+	response, _ = dao.ServiceRepo.EventLoggerService.LogEvent(payload)
+
+	ctx.JSON(http.StatusOK, map[string]interface{}{"message": response})
 	ctx.Abort()
 }
