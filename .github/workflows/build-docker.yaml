@@ -1,26 +1,28 @@
 name: Build Docker Image
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*.*.*'
+
 jobs:
-    build:
-      name: push docker image to docker hub
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v2
-        - name: login to docker hub
-          id: docker-hub
-          env:
-            username: dubemezeagwu
-            password: docker@123
-          run: |
-            docker login -u $username -p $password 
-        - name: build the docker image
-          id: build-docker-image
-          run: |
-            ls -la 
-            docker build . -f Dockerfile -t dubemezeagwu/deployment-service:latest
-        - name: push the docker image
-          id: push-docker-image
-          run: docker push dubemezeagwu/deployment-service:latest
+  build:
+    name: push docker image to docker hub
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: login to docker hub
+        id: docker-hub
+        env:
+          version: ${{ github.event.release.tag_name }}
+          username: dubemezeagwu
+          password: docker@123
+        run: |
+          docker login -u $username -p $password 
+      - name: build the docker image
+        id: build-docker-image
+        run: |
+          ls -la 
+          docker build . -f Dockerfile -t dubemezeagwu/deployment-service:${version}
+      - name: push the docker image
+        id: push-docker-image
+        run: docker push dubemezeagwu/deployment-service:${version}
