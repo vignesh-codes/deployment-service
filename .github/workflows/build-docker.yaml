@@ -6,23 +6,25 @@ on:
 
 jobs:
   build:
-    name: push docker image to docker hub
+    name: Push Docker Image to Docker Hub
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: login to docker hub
+      - name: Set version tag
+        id: set-version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - name: Login to Docker Hub
         id: docker-hub
         env:
-          version: ${{ github.event.release.tag_name }}
           username: dubemezeagwu
           password: docker@123
         run: |
-          docker login -u $username -p $password 
-      - name: build the docker image
+          docker login -u $username -p $password
+      - name: Build the Docker image
         id: build-docker-image
         run: |
-          ls -la 
-          docker build . -f Dockerfile -t dubemezeagwu/deployment-service:${version}
-      - name: push the docker image
+          ls -la
+          docker build . -f Dockerfile -t dubemezeagwu/deployment-service:${{ env.version }}
+      - name: Push the Docker image
         id: push-docker-image
-        run: docker push dubemezeagwu/deployment-service:${version}
+        run: docker push dubemezeagwu/deployment-service:${{ env.version }}
