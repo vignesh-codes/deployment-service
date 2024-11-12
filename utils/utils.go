@@ -5,6 +5,7 @@ import (
 	"deployment-service/logger"
 	"deployment-service/utils/response"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
@@ -73,4 +74,17 @@ func BindJSON(c *gin.Context, req interface{}) bool {
 	}
 
 	return true
+}
+
+// converts a struct to a map[string]interface{}
+func StructToMap(mystruct any) map[string]interface{} {
+	var inInterface map[string]interface{}
+	inrec, _ := json.Marshal(mystruct)
+	json.Unmarshal(inrec, &inInterface)
+
+	// iterate through inrecs
+	for field, val := range inInterface {
+		fmt.Println("KV Pair: ", field, val)
+	}
+	return inInterface
 }

@@ -18,5 +18,7 @@ func V1(group *gin.RouterGroup, repository *adapter.Repository) {
 	{
 		group.GET("/deployments/", v1ClientDeploymentsCtrl.GetDeploymentsByNamespace)
 		group.GET("/tenant/", v1ClientDeploymentsCtrl.GetTenantKubernetesInfo)
+		group.GET("/deployments/:deployment_name", v1ClientDeploymentsCtrl.GetDeploymentByName)
+		group.POST("/createns/", v1ClientDeploymentsCtrl.CreateNamespace)
 	}
 }

@@ -134,3 +134,36 @@ func (k *Kubernetes) DeleteDeploymentByName(namespace, deploymentName string) er
 	fmt.Printf("Successfully deleted deployment %s from namespace %s\n", deploymentName, namespace)
 	return nil
 }
+
+// Get Deployment by Name gets deployment info in detail
+func (k *Kubernetes) GetDeploymentByName(namespace, deploymentName string) (map[string]interface{}, error) {
+	deploymentsClient := k.connection.AppsV1().Deployments(namespace)
+	deployment, err := deploymentsClient.Get(context.TODO(), deploymentName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get deployment %s: %w", deploymentName, err)
+	}
+	result := map[string]interface{}{}
+	result["spec"] = deployment.Spec
+	result["status"] = deployment.Status
+	return result, nil
+}
+
+// Create namespace
+func (k *Kubernetes) CreateNamespace(namespace string) error {
+	// check if namespace is already created
+	_, err := k.connection.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+	if err == nil {
+		fmt.Printf("Namespace %s already exists\n", namespace)
+		return nil
+	}
+	_, err = k.connection.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create namespace %s: %w", namespace, err)
+	}
+	fmt.Printf("Successfully created namespace %s\n", namespace)
+	return nil
+}
