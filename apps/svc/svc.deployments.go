@@ -123,6 +123,7 @@ func (svc DeploymentService) GetDeploymentByName(namespace, deploymentName strin
 		Status:            kubernetesManifest.Status, // Adjust to include available status like "Available", "Progressing", etc.
 		DesiredReplicas:   desiredReplicas,
 		CurrentReplicas:   currentReplicas,
+		Image:             kubernetesManifest.Image,
 		AvailableReplicas: availableReplicas, // Add available replicas field
 		KubernetesManifest: map[string]interface{}{
 			"spec": kubernetesManifest.Spec,

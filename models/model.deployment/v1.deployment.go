@@ -31,6 +31,7 @@ type DeploymentInfo struct {
 	Status             string                 `json:"status"`
 	DesiredReplicas    int                    `json:"desired_replicas"`
 	CurrentReplicas    int                    `json:"current_replicas"`
+	Image              string                 `json:"image"`
 	AvailableReplicas  int                    `json:"available_replicas"`
 	KubernetesManifest map[string]interface{} `json:"kubernetes_manifest"`
 }
