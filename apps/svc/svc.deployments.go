@@ -210,7 +210,7 @@ func (svc DeploymentService) CreateNamespace(namespace string) error {
 func (svc DeploymentService) CreateDeployment(payload *model_deployment.CreateDeploymentRequest) (interface{}, error) {
 	// Create the Deployment
 	err := svc.repository.Kubernetes.CreateDeployment(payload.Namespace, payload.Name,
-		payload.Image, payload.Replicas, payload.ContainerPort)
+		payload.Image, payload.Replicas, payload.ContainerPort, "50m", "0.2Gi")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create deployment: %w", err)
 	}

@@ -18,7 +18,7 @@ import (
 
 func main() {
 
-	logger.InitLogger()
+	logger.InitConsoleLogger()
 	logger.InitEventLogger()
 	// configs := config.GetConfig()
 	// aws := instance.GetAwsSession()

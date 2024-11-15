@@ -49,3 +49,35 @@ func InitLogger() {
 	defer Logger.Sync()
 	defer ConsoleLogger.Sync()
 }
+
+func InitConsoleLogger() {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("panic occurred:", err)
+		}
+	}()
+
+	// Configure zap's encoder with ISO8601 time format
+	config := zap.NewProductionEncoderConfig()
+	config.EncodeTime = zapcore.ISO8601TimeEncoder
+	config.LevelKey = "level"
+	config.MessageKey = "event"
+	config.StacktraceKey = ""
+	config.TimeKey = "time"
+
+	// Create a console encoder that outputs logs to the console
+	consoleEncoder := zapcore.NewConsoleEncoder(config)
+
+	// Create a core that will log to the console only
+	core := zapcore.NewCore(consoleEncoder, zapcore.AddSync(os.Stdout), zapcore.DebugLevel)
+
+	// Initialize the logger with the core
+	Logger = zap.New(core)
+
+	// Log an info message to verify logger initialization
+	Logger.Info("Logger initialized for console logging")
+	ConsoleLogger, _ = zap.NewProduction()
+	// Ensure that any buffered logs are written to the console
+	defer Logger.Sync()
+	defer ConsoleLogger.Sync()
+}

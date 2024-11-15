@@ -9,10 +9,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/pointer"
 )
 
 // NewKubernetes initializes the Kubernetes adapter
@@ -236,7 +238,8 @@ func (k *Kubernetes) CreateNamespace(namespace string) error {
 	return nil
 }
 
-func (k *Kubernetes) CreateDeployment(namespace, deploymentName, image string, replicas int32, containerPort int32) error {
+func (k *Kubernetes) CreateDeployment(namespace, deploymentName, image string,
+	replicas int32, containerPort int32, req_cpu, req_memory string) error {
 	// Check if deployment already exists
 	_, err := k.connection.AppsV1().Deployments(namespace).Get(context.TODO(), deploymentName, metav1.GetOptions{})
 	if err == nil {
@@ -267,6 +270,16 @@ func (k *Kubernetes) CreateDeployment(namespace, deploymentName, image string, r
 					},
 				},
 				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{
+						{
+							Name: "tmpfs-storage",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{
+									Medium: "Memory", // Use memory-based storage
+								},
+							},
+						},
+					},
 					Containers: []corev1.Container{
 						{
 							Name:  deploymentName,
@@ -275,6 +288,29 @@ func (k *Kubernetes) CreateDeployment(namespace, deploymentName, image string, r
 								{
 									ContainerPort: containerPort,
 								},
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse(req_cpu),
+									corev1.ResourceMemory: resource.MustParse(req_memory),
+									// Set requests for ephemeral storage to zero
+									corev1.ResourceEphemeralStorage: resource.MustParse("0"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("0.5"),
+									corev1.ResourceMemory: resource.MustParse("0.5Gi"),
+									// Set limits for ephemeral storage to zero
+									corev1.ResourceEphemeralStorage: resource.MustParse("0"),
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "tmpfs-storage",
+									MountPath: "/tmp", // Mount tmpfs volume at /tmp
+								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								ReadOnlyRootFilesystem: pointer.BoolPtr(true), // Make root filesystem read-only
 							},
 						},
 					},

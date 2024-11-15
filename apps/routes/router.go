@@ -57,7 +57,7 @@ func invalidPathHandler() gin.HandlerFunc {
 
 func (r *Router) setConfigRouters() {
 	r.SetMode()
-	r.EnableAPILogger()
+	// r.EnableAPILogger()
 	r.EnableCORS()
 	r.EnableRecover()
 	r.RouterHealth()
