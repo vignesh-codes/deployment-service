@@ -35,4 +35,5 @@ var (
 var (
 	MONGODB_USER string = GetEnvString("MONGODB_USER", "user1")
 	MONGODB_PWD  string = GetEnvString("MONGODB_PWD", "xx")
+	MONGODB_NAME string = GetEnvString("MONGODB_NAME", "Cluster0")
 )

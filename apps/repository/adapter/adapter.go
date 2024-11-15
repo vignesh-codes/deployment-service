@@ -1,7 +1,6 @@
 package adapter
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"gorm.io/gorm"
 	"k8s.io/client-go/kubernetes"
@@ -50,16 +49,6 @@ type IRedAdapter interface {
 }
 
 type IMongoQueryAdapter interface {
-	InsertOne(collection string, document interface{}) (*mongo.InsertOneResult, error)
-	InsertMany(collection string, documents []interface{}) (*mongo.InsertManyResult, error)
-	FindOne(collection string, filter bson.M) *mongo.SingleResult
-	FindMany(collection string, filter bson.M) (*mongo.Cursor, error)
-	UpdateOne(collection string, filter bson.M, update bson.M) (*mongo.UpdateResult, error)
-	UpdateMany(collection string, filter bson.M, update bson.M) (*mongo.UpdateResult, error)
-	DeleteOne(collection string, filter bson.M) (*mongo.DeleteResult, error)
-	DeleteMany(collection string, filter bson.M) (*mongo.DeleteResult, error)
-	CountDocuments(collection string, filter bson.M) (int64, error)
-	Aggregate(collection string, pipeline mongo.Pipeline) (*mongo.Cursor, error)
 }
 
 type IPSqlQueryAdapter interface {

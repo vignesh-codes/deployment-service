@@ -9,11 +9,20 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator"
 )
+
+func GetRepoNameFromURL(url string) (string, error) {
+	parts := strings.Split(url, "/")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("invalid URL format")
+	}
+	return parts[len(parts)-2] + "/" + parts[len(parts)-1], nil
+}
 
 func GenerateUUID(str string) int64 {
 	// Generate MD5 hash of the input string

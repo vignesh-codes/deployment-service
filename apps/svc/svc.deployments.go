@@ -1,16 +1,25 @@
 package svc
 
 import (
+	"context"
 	adapter "deployment-service/apps/repository/adapter"
+	"deployment-service/logger"
+	model_build "deployment-service/models/model.build"
+	model_deployment "deployment-service/models/model.deployment"
 	"fmt"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"go.uber.org/zap"
 )
 
-type DeplyomentService struct {
+type DeploymentService struct {
 	repository *adapter.Repository
 }
 
-func (svc DeplyomentService) GetDeploymentsByNamespace(namespace string) ([]map[string]interface{}, error) {
+func (svc DeploymentService) GetDeploymentsByNamespace(namespace string) ([]map[string]interface{}, error) {
 	deployments, err := svc.repository.Kubernetes.ListDeployments(namespace)
 	var deploymentInfo []map[string]interface{}
 	if err == nil {
@@ -59,88 +68,276 @@ func (svc DeplyomentService) GetDeploymentsByNamespace(namespace string) ([]map[
 	return deploymentInfo, nil
 }
 
-func (svc DeplyomentService) GetTenantKubernetesInfo(namespace string) (map[string]interface{}, error) {
-	clusterInfo := make(map[string]interface{})
-
-	// Fetch Namespaces
-	namespaces, err := svc.repository.Kubernetes.ListNamespaces()
-	if err != nil {
-		return nil, err
-	}
-	var namespaceNames []string
-	for _, ns := range namespaces {
-		namespaceNames = append(namespaceNames, ns.Name)
-	}
-	clusterInfo["Namespaces"] = namespaceNames
+func (svc DeploymentService) GetTenantKubernetesInfo(namespace string) (model_build.TenantResourceResp, error) {
+	var resp = model_build.TenantResourceResp{}
 
 	// Fetch Pods
 	pods, err := svc.repository.Kubernetes.ListPods(namespace)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
-	var podInfo []map[string]string
-	for _, pod := range pods {
-		podInfo = append(podInfo, map[string]string{
-			"Pod Name":   pod.Name,
-			"Namespace":  pod.Namespace,
-			"Node Name":  pod.Spec.NodeName,
-			"Status":     string(pod.Status.Phase),
-			"Start Time": pod.Status.StartTime.Format(time.RFC3339),
-		})
-	}
-	clusterInfo["Pods"] = podInfo
 
 	// Fetch Kubernetes Version
 	k8sVersion, err := svc.repository.Kubernetes.GetKubernetesVersion()
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
-	clusterInfo["Kubernetes Version"] = k8sVersion
 
 	// Fetch Deployments
 	deployments, err := svc.repository.Kubernetes.ListDeployments(namespace)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
-	var deploymentInfo []map[string]string
-	for _, deploy := range deployments {
-		replicas := "0"
-		if deploy.Spec.Replicas != nil {
-			replicas = fmt.Sprintf("%d", *deploy.Spec.Replicas)
-		}
-		deploymentInfo = append(deploymentInfo, map[string]string{
-			"Deployment Name": deploy.Name,
-			"Namespace":       deploy.Namespace,
-			"Replicas":        replicas,
-			"Available":       fmt.Sprintf("%d", deploy.Status.AvailableReplicas),
-			"Status":          deploy.CreationTimestamp.GoString(),
-			"Image":           deploy.Spec.Template.Spec.Containers[0].Image,
-		})
-	}
-	clusterInfo["Deployments"] = deploymentInfo
 
 	// Fetch Services
 	services, err := svc.repository.Kubernetes.ListServices(namespace)
 	if err != nil {
+		return resp, err
+	}
+
+	resp.KubernetesVersion = k8sVersion
+	resp.NoOfDeployments = int64(len(deployments))
+	resp.NoOfPods = int64(len(pods))
+	resp.NoOfServices = int64(len(services))
+	resp.TenantUsername = namespace
+	return resp, nil
+}
+
+// DeploymentService: Updated method to map available replicas and status correctly
+func (svc DeploymentService) GetDeploymentByName(namespace, deploymentName string) (*model_deployment.DeploymentInfo, error) {
+	// Get structured deployment data
+	kubernetesManifest, err := svc.repository.Kubernetes.GetDeploymentByName(namespace, deploymentName)
+	if err != nil {
 		return nil, err
 	}
-	var serviceInfo []map[string]string
-	for _, svc := range services {
-		serviceInfo = append(serviceInfo, map[string]string{
-			"Service Name": svc.Name,
-			"Namespace":    svc.Namespace,
-			"Type":         string(svc.Spec.Type),
-			"Cluster IP":   svc.Spec.ClusterIP,
-		})
+
+	// Retrieve replicas info
+	desiredReplicas := int(kubernetesManifest.DesiredReplicas)
+	currentReplicas := int(kubernetesManifest.CurrentReplicas)
+	availableReplicas := int(kubernetesManifest.AvailableReplicas) // Add available replicas
+
+	// Populate DeploymentInfo struct
+	deploymentInfo := &model_deployment.DeploymentInfo{
+		DeploymentName:    deploymentName,
+		Age:               kubernetesManifest.Age,
+		Status:            kubernetesManifest.Status, // Adjust to include available status like "Available", "Progressing", etc.
+		DesiredReplicas:   desiredReplicas,
+		CurrentReplicas:   currentReplicas,
+		AvailableReplicas: availableReplicas, // Add available replicas field
+		KubernetesManifest: map[string]interface{}{
+			"spec": kubernetesManifest.Spec,
+		},
 	}
-	clusterInfo["Services"] = serviceInfo
-	return clusterInfo, nil
+
+	return deploymentInfo, nil
 }
 
-func (svc DeplyomentService) GetDeploymentByName(namespace, deploymentName string) (map[string]interface{}, error) {
-	return svc.repository.Kubernetes.GetDeploymentByName(namespace, deploymentName)
+func (svc DeploymentService) GetLatestEvents(namespace string, topK int) ([]string, error) {
+	return svc.repository.Kubernetes.GetLatestEvents(namespace, topK)
 }
 
-func (svc DeplyomentService) CreateNamespace(namespace string) error {
+// UpdateDeploymentReplicas updates the number of replicas for a given deployment in Kubernetes
+// and updates the corresponding MongoDB document.
+func (svc DeploymentService) UpdateDeploymentByName(namespace, deploymentName string, image string, replicas int32) (map[string]interface{}, error) {
+	// Retrieve the current deployment object
+	fmt.Println("143 ---- ", deploymentName, replicas, image)
+
+	deployment, err := svc.GetDeploymentFromDBByName(namespace, deploymentName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get deployment %s in namespace %s: %w", deploymentName, namespace, err)
+	}
+	fmt.Println("148 ---- ", deployment.Replicas, deployment.Image)
+	needToUpdateDb := false
+	if replicas == -1 {
+		replicas = deployment.Replicas
+
+	}
+	if image == "" {
+		image = deployment.Image
+
+	}
+
+	// Update the replicas in Kubernetes deployment
+	if replicas != deployment.Replicas || image != deployment.Image {
+		needToUpdateDb = true
+		err := svc.repository.Kubernetes.UpdateDeploymentReplicasAndImage(namespace, deploymentName, replicas, image)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update replicas in Kubernetes: %w", err)
+		}
+	}
+	if !needToUpdateDb {
+		return map[string]interface{}{
+			"message": fmt.Sprintf("Successfully updated replicas to %d and image to %s for deployment %s in Kubernetes", replicas, deploymentName, image),
+		}, nil
+	}
+	// Update the corresponding MongoDB document
+	resp, err := svc.updateDeploymentInMongoDB(deploymentName, image, replicas)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update MongoDB for deployment %s: %w", deploymentName, err)
+	}
+
+	fmt.Printf("Successfully updated replicas to %d and image to %s for deployment %s in Kubernetes", replicas, deploymentName, image)
+	return resp, nil
+}
+
+// updateDeploymentInMongoDB updates the replica count for the deployment in MongoDB's DEPLOYMENTS collection.
+func (svc DeploymentService) updateDeploymentInMongoDB(deploymentName string, image string, replicas int32) (map[string]interface{}, error) {
+	// Construct the filter and update for MongoDB
+	fmt.Println("updating this item ", deploymentName, image, replicas)
+	filter := bson.M{"name": deploymentName}
+	update := bson.M{
+		"$set": bson.M{
+			"image":    image,
+			"replicas": replicas,
+		},
+	}
+
+	// Update the MongoDB document
+	res, err := svc.repository.MongoDB.UpdateOne("DEPLOYMENTS", filter, update)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update MongoDB document: %w", err)
+	}
+
+	return map[string]interface{}{
+		"result": res,
+	}, nil
+}
+
+func (svc DeploymentService) CreateNamespace(namespace string) error {
 	return svc.repository.Kubernetes.CreateNamespace(namespace)
+}
+
+func (svc DeploymentService) CreateDeployment(payload *model_deployment.CreateDeploymentRequest) (interface{}, error) {
+	// Create the Deployment
+	err := svc.repository.Kubernetes.CreateDeployment(payload.Namespace, payload.Name,
+		payload.Image, payload.Replicas, payload.ContainerPort)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create deployment: %w", err)
+	}
+
+	err = svc.repository.Kubernetes.CreateService(payload.Namespace, payload.Name+"-service",
+		payload.Name, payload.ContainerPort, payload.ContainerPort)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create service: %w", err)
+	}
+	payload.Status = "ACTIVE"
+
+	// Insert the deployment data into MongoDB
+	_, err = svc.repository.MongoDB.InsertOne("DEPLOYMENTS", payload)
+	if err != nil {
+		logger.Logger.Error("Error while inserting new deployment", zap.Any(logger.KEY_ERROR, err.Error()))
+		return nil, err
+	}
+	fmt.Println("repo scout id is ", payload.RepoScoutId)
+	// update repo scout based on RepoScoutId from payload
+	repo_scout_id, err := primitive.ObjectIDFromHex(payload.RepoScoutId)
+	fmt.Println("repo scout is is , ", repo_scout_id, err)
+	filter := bson.M{"_id": repo_scout_id}
+
+	// Define the update operation to push the new DeploymentID to the Deployments array
+	update := bson.M{
+		"$push": bson.M{"deployments": payload.Name},
+		"$set":  bson.M{"updatedAt": time.Now()},
+	}
+
+	// Perform the update operation
+	scout_repo_result, err := svc.repository.MongoDB.UpdateOne("REPO_SCOUTS", filter, update)
+	if err != nil {
+		logger.Logger.Error("Error while updating repo scouts", zap.Any(logger.KEY_ERROR, err.Error()))
+		return nil, err
+	}
+
+	// Log success if document was updated
+	if scout_repo_result.ModifiedCount > 0 {
+		logger.Logger.Info("RepoScout updated successfully", zap.Any("RepoScoutId", payload.ID))
+	} else {
+		logger.Logger.Warn("No RepoScout document found with specified RepoScoutId", zap.Any("RepoScoutId", payload.ID))
+	}
+	return payload, nil
+}
+
+func (svc DeploymentService) GetAllDeploymentsFromDBByNamespace(namespace string) ([]model_deployment.CreateDeploymentRequest, error) {
+
+	filter := bson.M{"namespace": namespace}
+	var results = []model_deployment.CreateDeploymentRequest{}
+	cursor, err := svc.repository.MongoDB.FindMany("DEPLOYMENTS", filter)
+	if err != nil {
+		fmt.Println("error in fetchning many deployments", err)
+		return nil, err
+	}
+	// Iterate over the cursor to decode each document into the slice
+	for cursor.Next(context.TODO()) {
+		var deployment model_deployment.CreateDeploymentRequest
+		if err := cursor.Decode(&deployment); err != nil {
+			return nil, fmt.Errorf("error decoding document: %w", err)
+		}
+		results = append(results, deployment)
+	}
+
+	// Check if there were any errors during iteration
+	if err := cursor.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over cursor: %w", err)
+	}
+	fmt.Println("res is ", results)
+	return results, nil
+}
+
+func (svc DeploymentService) GetDeploymentFromDBByName(namespace, deplyomentName string) (*model_deployment.CreateDeploymentRequest, error) {
+	filter := bson.M{"namespace": namespace, "name": deplyomentName}
+	var result = model_deployment.CreateDeploymentRequest{}
+	res := svc.repository.MongoDB.FindOne("DEPLOYMENTS", filter)
+	if err := res.Decode(&result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (svc DeploymentService) DeleteDeployment(namespace, deploymentName, RepoScoutId string) (map[string]interface{}, error) {
+	// Delete the Deployment from Kubernetes
+	err := svc.repository.Kubernetes.DeleteDeployment(namespace, deploymentName)
+	if err != nil {
+		// return nil, fmt.Errorf("failed to delete deployment: %w", err)
+	}
+
+	// Delete the associated Service from Kubernetes
+	err = svc.repository.Kubernetes.DeleteService(namespace, deploymentName+"-service")
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete service: %w", err)
+	}
+
+	// Remove the deployment record from MongoDB
+	filter := bson.M{"namespace": namespace, "name": deploymentName}
+	deploymentDeleteResult, err := svc.repository.MongoDB.DeleteOne("DEPLOYMENTS", filter)
+	if err != nil {
+		logger.Logger.Error("Error while deleting deployment from MongoDB", zap.Any(logger.KEY_ERROR, err.Error()))
+		return nil, err
+	}
+
+	// Update the RepoScout document to remove the deployment reference
+	repo_scout_id, err := primitive.ObjectIDFromHex(RepoScoutId)
+	fmt.Println("repo scout is is , ", repo_scout_id, err)
+	updateFilter := bson.M{"_id": repo_scout_id}
+	update := bson.M{
+		"$pull": bson.M{"deployments": deploymentName},
+		"$set":  bson.M{"updatedAt": time.Now()},
+	}
+
+	repoScoutUpdateResult, err := svc.repository.MongoDB.UpdateOne("REPO_SCOUTS", updateFilter, update)
+	if err != nil {
+		logger.Logger.Error("Error while updating RepoScout in MongoDB", zap.Any(logger.KEY_ERROR, err.Error()))
+		return nil, err
+	}
+
+	// Log success if the RepoScout document was updated
+	if repoScoutUpdateResult.ModifiedCount > 0 {
+		logger.Logger.Info("RepoScout updated successfully", zap.String("RepoScoutId", RepoScoutId))
+	} else {
+		logger.Logger.Warn("No RepoScout document found with specified RepoScoutId", zap.String("RepoScoutId", RepoScoutId))
+	}
+
+	// Return details of the delete operation
+	return map[string]interface{}{
+		"deployment_delete_result": deploymentDeleteResult,
+		"repo_scout_update_result": repoScoutUpdateResult,
+	}, nil
 }
