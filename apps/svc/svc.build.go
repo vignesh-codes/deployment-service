@@ -67,8 +67,8 @@ func (svc BuildService) GetAllRepoScouts(namespace string) ([]model_build.RepoSc
 	return result, nil
 }
 
-func (svc BuildService) GetReleaseInfo(repoURLs []string, topK int) ([]map[string]interface{}, error) {
-	var result []map[string]interface{}
+func (svc BuildService) GetReleaseInfo(repoURLs []string, topK int) ([]model_build.RepoReleases, error) {
+	var result []model_build.RepoReleases
 
 	// Iterate over each repository URL
 	for _, repoURL := range repoURLs {
@@ -92,34 +92,27 @@ func (svc BuildService) GetReleaseInfo(repoURLs []string, topK int) ([]map[strin
 			return nil, fmt.Errorf("failed to read response body for %s: %w", repoURL, err)
 		}
 
-		// Print the body to see what was returned
-		// fmt.Println("Response Body:", string(body))
-
 		// Decode the response
 		var releases []model_build.ReleaseInfo
 		if err := json.Unmarshal(body, &releases); err != nil {
 			return nil, fmt.Errorf("failed to decode response for %s: %w", repoURL, err)
 		}
-		// Select the top 3 releases
-		topReleases := []map[string]interface{}{}
+
+		// Select the top K releases
+		var topReleases []model_build.ReleaseInfo
 		for i, release := range releases {
 			if i >= topK {
 				break
 			}
 
-			// Create a map for each release with the necessary fields
-			topReleases = append(topReleases, map[string]interface{}{
-				"html_url":     release.HtmlURL,
-				"tag_name":     release.TagName,
-				"created_at":   release.CreatedAt,
-				"published_at": release.PublishedAt,
-			})
+			// Add the release to the topReleases slice
+			topReleases = append(topReleases, release)
 		}
 
 		// Append to the result with the formatted repo info
-		result = append(result, map[string]interface{}{
-			"repo_url": "https://github.com/" + repoURL, // Keep the repository URL for reference
-			"releases": topReleases,                     // Append the top releases for the repo
+		result = append(result, model_build.RepoReleases{
+			RepoURL:  "https://github.com/" + repoURL, // Keep the repository URL for reference
+			Releases: topReleases,                     // Append the top releases for the repo
 		})
 	}
 

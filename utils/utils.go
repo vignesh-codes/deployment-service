@@ -24,6 +24,27 @@ func GetRepoNameFromURL(url string) (string, error) {
 	return parts[len(parts)-2] + "/" + parts[len(parts)-1], nil
 }
 
+// "dubemezeagwu/deployment-service:v0.0.3"
+func GetDockertagFromURL(url string) string {
+	// Split the URL by "/"
+	parts := strings.Split(url, "/")
+	if len(parts) < 2 {
+		return ""
+	}
+
+	// Get the last part, which contains the repository and tag
+	lastPart := parts[len(parts)-1]
+
+	// Split by the colon to separate the tag from the repository
+	tagParts := strings.Split(lastPart, ":")
+	if len(tagParts) < 2 {
+		return ""
+	}
+
+	// Return the Docker tag
+	return tagParts[1]
+}
+
 func GenerateUUID(str string) int64 {
 	// Generate MD5 hash of the input string
 	hash := md5.Sum([]byte(str))

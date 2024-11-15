@@ -5,6 +5,7 @@ import (
 	"deployment-service/apps/svc"
 	"deployment-service/logger"
 	model_build "deployment-service/models/model.build"
+	"deployment-service/utils"
 	"fmt"
 	"net/http"
 
@@ -78,6 +79,9 @@ func (dao BuildDao) GetAllRepoScouts(ctx *gin.Context, request *model_build.Repo
 				fmt.Println("Error fetching deployment info:", err)
 				logger.Logger.Error("Error GetDeploymentByName", zap.Any("err:", err.Error()))
 				continue
+			}
+			if deploymentInfo != nil && utils.GetDockertagFromURL(deploymentInfo.Image) != releaseInfo[0].Releases[0].TagName {
+				deploymentInfo.OutOfSync = true
 			}
 			// Append deployment data to the repo response
 			repoResponse["deployments"] = append(repoResponse["deployments"].([]map[string]interface{}), map[string]interface{}{

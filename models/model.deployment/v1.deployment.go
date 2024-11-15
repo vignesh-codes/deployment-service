@@ -34,4 +34,5 @@ type DeploymentInfo struct {
 	Image              string                 `json:"image"`
 	AvailableReplicas  int                    `json:"available_replicas"`
 	KubernetesManifest map[string]interface{} `json:"kubernetes_manifest"`
+	OutOfSync          bool                   `json:"out_of_sync"`
 }
