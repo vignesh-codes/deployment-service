@@ -7,11 +7,10 @@ RUN apk update && apk add --no-cache curl ca-certificates
 # Set the working directory
 WORKDIR /app
 
-# Copy all the Go files and modules into the container
-COPY go.mod go.sum ./
-RUN go mod tidy
 
 COPY . .
+
+RUN go mod tidy
 
 # Build the Go binary with CGO disabled for portability
 RUN CGO_ENABLED=0 GOOS=linux go build -o myapp .
