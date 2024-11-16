@@ -52,10 +52,11 @@ func (dao BuildDao) GetAllRepoScouts(ctx *gin.Context, request *model_build.Repo
 	// Iterate over each repo scout
 	for _, repoScout := range repoScouts {
 		repoResponse := map[string]interface{}{
-			"repo_name":     repoScout.RepoName,
-			"repo_scout_id": repoScout.ID,
-			"deployments":   []map[string]interface{}{}, // Nested deployments data for each repo
-			"release_info":  map[string]interface{}{},   // Release info data for each repo
+			"repo_name":        repoScout.RepoName,
+			"repo_scout_id":    repoScout.ID,
+			"latest_image_url": "",
+			"deployments":      []map[string]interface{}{}, // Nested deployments data for each repo
+			"release_info":     map[string]interface{}{},   // Release info data for each repo
 		}
 
 		// Fetch release info for the repo
@@ -70,6 +71,7 @@ func (dao BuildDao) GetAllRepoScouts(ctx *gin.Context, request *model_build.Repo
 
 		if len(releaseInfo) > 0 {
 			repoResponse["release_info"] = releaseInfo[0]
+			repoResponse["latest_image_url"] = repoScout.DockerBaseURL + ":" + releaseInfo[0].Releases[0].TagName
 		}
 		// Fetch deployments for the repo
 		for _, deployment := range repoScout.Deployments {
