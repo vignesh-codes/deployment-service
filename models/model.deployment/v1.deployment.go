@@ -26,13 +26,13 @@ type UpdateDeploymentReq struct {
 }
 
 type DeploymentInfo struct {
-	DeploymentName     string                 `json:"deployment_name"`
-	Age                string                 `json:"age"`
-	Status             string                 `json:"status"`
-	DesiredReplicas    int                    `json:"desired_replicas"`
-	CurrentReplicas    int                    `json:"current_replicas"`
-	Image              string                 `json:"image"`
-	AvailableReplicas  int                    `json:"available_replicas"`
-	KubernetesManifest map[string]interface{} `json:"kubernetes_manifest"`
-	OutOfSync          bool                   `json:"out_of_sync"`
+	DeploymentName    string                 `json:"deployment_name"`
+	Age               string                 `json:"age"`
+	Status            string                 `json:"status"`
+	DesiredReplicas   int                    `json:"desired_replicas"`
+	CurrentReplicas   int                    `json:"current_replicas"`
+	Image             string                 `json:"image"`
+	AvailableReplicas int                    `json:"available_replicas"`
+	OtherInfo         map[string]interface{} `json:"other_info"`
+	OutOfSync         bool                   `json:"out_of_sync"`
 }

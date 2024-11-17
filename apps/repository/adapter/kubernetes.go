@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // NewKubernetes initializes the Kubernetes adapter
@@ -263,6 +263,13 @@ func (k *Kubernetes) CreateDeployment(namespace, deploymentName, image string,
 					"app": deploymentName,
 				},
 			},
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxSurge:       &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
+					MaxUnavailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
+				},
+			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
@@ -275,7 +282,7 @@ func (k *Kubernetes) CreateDeployment(namespace, deploymentName, image string,
 							Name: "tmpfs-storage",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{
-									Medium: "Memory", // Use memory-based storage
+									Medium: "Memory",
 								},
 							},
 						},
@@ -293,14 +300,10 @@ func (k *Kubernetes) CreateDeployment(namespace, deploymentName, image string,
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse(req_cpu),
 									corev1.ResourceMemory: resource.MustParse(req_memory),
-									// Set requests for ephemeral storage to zero
-									corev1.ResourceEphemeralStorage: resource.MustParse("0"),
 								},
 								Limits: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("0.5"),
 									corev1.ResourceMemory: resource.MustParse("0.5Gi"),
-									// Set limits for ephemeral storage to zero
-									corev1.ResourceEphemeralStorage: resource.MustParse("0"),
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
@@ -310,7 +313,7 @@ func (k *Kubernetes) CreateDeployment(namespace, deploymentName, image string,
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								ReadOnlyRootFilesystem: pointer.BoolPtr(true), // Make root filesystem read-only
+								ReadOnlyRootFilesystem: ptr.To(false), // Allow writes to filesystem if needed
 							},
 						},
 					},
@@ -350,7 +353,7 @@ func (k *Kubernetes) CreateService(namespace, serviceName, deploymentName string
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
-				"app": deploymentName, // Match the deployment's label selector
+				"app": deploymentName,
 			},
 			Ports: []corev1.ServicePort{
 				{

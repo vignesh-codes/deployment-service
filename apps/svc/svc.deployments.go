@@ -115,7 +115,10 @@ func (svc DeploymentService) GetDeploymentByName(namespace, deploymentName strin
 	desiredReplicas := int(kubernetesManifest.DesiredReplicas)
 	currentReplicas := int(kubernetesManifest.CurrentReplicas)
 	availableReplicas := int(kubernetesManifest.AvailableReplicas) // Add available replicas
-
+	svcInfo, err := svc.repository.Kubernetes.GetServiceInfo(namespace, deploymentName+"-service")
+	if err != nil {
+		svcInfo = "UNDEFINED"
+	}
 	// Populate DeploymentInfo struct
 	deploymentInfo := &model_deployment.DeploymentInfo{
 		DeploymentName:    deploymentName,
@@ -125,8 +128,9 @@ func (svc DeploymentService) GetDeploymentByName(namespace, deploymentName strin
 		CurrentReplicas:   currentReplicas,
 		Image:             kubernetesManifest.Image,
 		AvailableReplicas: availableReplicas, // Add available replicas field
-		KubernetesManifest: map[string]interface{}{
-			"spec": kubernetesManifest.Spec,
+		OtherInfo: map[string]interface{}{
+			"kuberenetes_spec": kubernetesManifest.Spec,
+			"endpoint":         svcInfo,
 		},
 	}
 
@@ -217,7 +221,7 @@ func (svc DeploymentService) CreateDeployment(payload *model_deployment.CreateDe
 	}
 
 	err = svc.repository.Kubernetes.CreateService(payload.Namespace, payload.Name+"-service",
-		payload.Name, payload.ContainerPort, payload.ContainerPort)
+		payload.Name, 80, payload.ContainerPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create service: %w", err)
 	}
