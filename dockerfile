@@ -7,23 +7,24 @@ RUN apk update && apk add --no-cache curl ca-certificates
 # Set the working directory
 WORKDIR /app
 
-
+# Copy all the Go files into the container
 COPY . .
 
+# Get dependencies and build the Go binary
 RUN go mod tidy
-
-# Build the Go binary with CGO disabled for portability
-RUN CGO_ENABLED=0 GOOS=linux go build -o myapp .
+RUN go build -o myapp .
 
 # Final stage (Runtime)
 FROM alpine:3.19
 
 # Install required dependencies for the runtime environment
-RUN apk add --no-cache libc6-compat ca-certificates && \
-    update-ca-certificates
+RUN apk add --no-cache libc6-compat ca-certificates
 
 # Copy the Go binary from the build stage
 COPY --from=builder /app/myapp /usr/local/bin/myapp
+
+# Expose application port
+EXPOSE 8080
 
 # Set the entry point to the compiled Go binary
 CMD ["/usr/local/bin/myapp"]

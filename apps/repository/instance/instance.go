@@ -5,6 +5,7 @@ import (
 	"deployment-service/constants"
 	"deployment-service/logger"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 )
@@ -74,13 +76,23 @@ func GetMongoConnection() *mongo.Client {
 }
 
 func GetKubernetesConnection() *kubernetes.Clientset {
-	// Path to the kubeconfig file (usually located in the user's home directory)
-	kubeconfigPath := filepath.Join(homedir.HomeDir(), ".kube", "config")
+	var config *rest.Config
+	var err error
 
-	// Build Kubernetes config from kubeconfig file
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to load kubeconfig: %v", err))
+	// Check if we're running inside a Kubernetes pod
+	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" && os.Getenv("KUBERNETES_SERVICE_PORT") != "" {
+		// Use in-cluster configuration
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			panic(fmt.Sprintf("Failed to load in-cluster config: %v", err))
+		}
+	} else {
+		// for local development/testing
+		kubeconfigPath := filepath.Join(homedir.HomeDir(), ".kube", "config")
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to load kubeconfig: %v", err))
+		}
 	}
 
 	// Initialize the Kubernetes clientset
