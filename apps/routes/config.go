@@ -21,7 +21,7 @@ func (c *Config) Cors() func(c *gin.Context) {
 			c.Header("Access-Control-Allow-Origin", origin_header[0])
 		}
 		c.Header("Access-Control-Allow-Credentials", "true")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, accesstoken, Accept-language, Authorization, Content-Type, x-app-version,x-platform, x-client-id, x-client-secret")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, accesstoken, Accept-language, Authorization, Content-Type, x-app-version,x-platform, x-client-id, x-client-secret, username")
 		c.Header("Access-Control-Allow-Methods", "GET,HEAD,PUT,POST,PATCH,DELETE,OPTIONS")
 
 		if c.Request.Method == "OPTIONS" {
