@@ -219,7 +219,7 @@ func (k *Kubernetes) GetDeploymentByName(namespace, deploymentName string) (*Kub
 }
 
 // Create namespace
-func (k *Kubernetes) CreateNamespace(namespace string) error {
+func (k *Kubernetes) CreateNamespaceIfNotExists(namespace string) error {
 	// check if namespace is already created
 	_, err := k.connection.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
 	if err == nil {

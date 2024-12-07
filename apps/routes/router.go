@@ -114,7 +114,9 @@ func (r *Router) SetInternalRoutes(repository *adapter.Repository) {
 
 func (r *Router) SetClientRoutes(repository *adapter.Repository) {
 	v1Group := r.router.Group("v1/")
+	v2Group := r.router.Group("v2/")
 	// v1PublicGroup := r.router.Group("v1/")
 	client.V1(v1Group, repository)
+	client.V2(v2Group, repository)
 	// client.V1PublicApis(v1PublicGroup, repository)
 }

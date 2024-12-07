@@ -35,6 +35,7 @@ func (ctrl BuildController) CreateNewRepoScout(ctx *gin.Context) {
 	}
 	request.Namespace = ctx.GetString("username")
 	request.RepoName, _ = utils.GetRepoNameFromURL(request.RepoURL)
+	request.Deployments = []string{}
 	request.CreatedAt = time.Now()
 	request.UpdatedAt = time.Now()
 	ctrl.v1BuildDao.CreateNewRepoScout(ctx, request)

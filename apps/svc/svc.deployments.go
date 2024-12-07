@@ -6,6 +6,7 @@ import (
 	"deployment-service/logger"
 	model_build "deployment-service/models/model.build"
 	model_deployment "deployment-service/models/model.deployment"
+	"errors"
 	"fmt"
 	"time"
 
@@ -71,6 +72,7 @@ func (svc DeploymentService) GetDeploymentsByNamespace(namespace string) ([]map[
 func (svc DeploymentService) GetTenantKubernetesInfo(namespace string) (model_build.TenantResourceResp, error) {
 	var resp = model_build.TenantResourceResp{}
 
+	_ = svc.repository.Kubernetes.CreateNamespaceIfNotExists(namespace)
 	// Fetch Pods
 	pods, err := svc.repository.Kubernetes.ListPods(namespace)
 	if err != nil {
@@ -208,13 +210,24 @@ func (svc DeploymentService) updateDeploymentInMongoDB(deploymentName string, im
 	}, nil
 }
 
-func (svc DeploymentService) CreateNamespace(namespace string) error {
-	return svc.repository.Kubernetes.CreateNamespace(namespace)
+func (svc DeploymentService) CreateNamespaceIfNotExists(namespace string) error {
+	return svc.repository.Kubernetes.CreateNamespaceIfNotExists(namespace)
 }
 
 func (svc DeploymentService) CreateDeployment(payload *model_deployment.CreateDeploymentRequest) (interface{}, error) {
+	// check if build exists
+	var result bson.M
+	objectId, err := primitive.ObjectIDFromHex(payload.RepoScoutId)
+	if err != nil {
+		return nil, errors.New("Invalid RepoScoutId format")
+	}
+	err1 := svc.repository.MongoDB.FindOne("REPO_SCOUTS", bson.M{"_id": objectId}).Decode(&result)
+	if err1 != nil {
+		fmt.Printf("FindOne error: %v\n", err1)
+		return nil, errors.New("Repo scout id not found")
+	}
 	// Create the Deployment
-	err := svc.repository.Kubernetes.CreateDeployment(payload.Namespace, payload.Name,
+	err = svc.repository.Kubernetes.CreateDeployment(payload.Namespace, payload.Name,
 		payload.Image, payload.Replicas, payload.ContainerPort, "50m", "0.2Gi")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create deployment: %w", err)

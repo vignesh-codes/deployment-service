@@ -90,7 +90,7 @@ func (dao DeploymentDao) GetDeploymentByName(ctx *gin.Context, namespace string)
 }
 
 func (dao DeploymentDao) CreateNamespace(ctx *gin.Context, namespace string) {
-	response := dao.ServiceRepo.DeploymentService.CreateNamespace(namespace)
+	response := dao.ServiceRepo.DeploymentService.CreateNamespaceIfNotExists(namespace)
 
 	ctx.JSON(http.StatusOK, map[string]interface{}{"message": "successfully created namespace", "err": response})
 	ctx.Abort()
