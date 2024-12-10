@@ -8,6 +8,7 @@ require (
 	github.com/gin-gonic/gin v1.9.0
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/golang-jwt/jwt/v4 v4.5.1
 	github.com/hashicorp/go-retryablehttp v0.7.2
 	github.com/rs/zerolog v1.29.1
 	go.mongodb.org/mongo-driver v1.17.1
@@ -38,7 +39,6 @@ require (
 	github.com/go-playground/validator/v10 v10.11.2 // indirect
 	github.com/goccy/go-json v0.10.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect

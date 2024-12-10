@@ -45,7 +45,7 @@ func (dao BuildDao) GetAllRepoScouts(ctx *gin.Context, request *model_build.Repo
 		})
 		return
 	}
-	console.log("got all repo scouts", repoScouts)
+	fmt.Println("got all repo scouts", repoScouts)
 	// Prepare the response as a list of repo scouts
 	response := []interface{}{}
 
@@ -58,7 +58,7 @@ func (dao BuildDao) GetAllRepoScouts(ctx *gin.Context, request *model_build.Repo
 			"deployments":      []map[string]interface{}{}, // Nested deployments data for each repo
 			"release_info":     map[string]interface{}{},   // Release info data for each repo
 		}
-		console.log("getting release info for repo", repoScout.RepoName)
+		fmt.Println("getting release info for repo", repoScout.RepoName)
 		// Fetch release info for the repo
 		releaseInfo, err := dao.ServiceRepo.BuildService.GetReleaseInfo([]string{repoScout.RepoName}, 1)
 		fmt.Println("release info is ", releaseInfo, err)
