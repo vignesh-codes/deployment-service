@@ -41,7 +41,7 @@ metadata:
   name: deployment-service-cluster-role
 rules:
 - apiGroups: [""]
-  resources: ["pods", "services"]
+  resources: ["pods", "services", "namespaces"]
   verbs: ["get", "list", "create", "delete", "update", "edit"]
 - apiGroups: ["apps"]
   resources: ["deployments"]

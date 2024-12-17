@@ -45,6 +45,6 @@ type TenantResourceResp struct {
 
 // RepoReleases holds information about a repository and its top releases
 type RepoReleases struct {
-	RepoURL  string        `json:"repo_url"`
-	Releases []ReleaseInfo `json:"releases"`
+	RepoURL  string      `json:"repo_url"`
+	Releases ReleaseInfo `json:"releases"`
 }

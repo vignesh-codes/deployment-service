@@ -72,7 +72,7 @@ func (dao BuildDao) GetAllRepoScouts(ctx *gin.Context, request *model_build.Repo
 
 		if len(releaseInfo) > 0 {
 			repoResponse["release_info"] = releaseInfo[0]
-			repoResponse["latest_image_url"] = repoScout.DockerBaseURL + ":" + releaseInfo[0].Releases[0].TagName
+			repoResponse["latest_image_url"] = repoScout.DockerBaseURL + ":" + releaseInfo[0].Releases.TagName
 		}
 		// Fetch deployments for the repo
 		for _, deployment := range repoScout.Deployments {
@@ -83,7 +83,7 @@ func (dao BuildDao) GetAllRepoScouts(ctx *gin.Context, request *model_build.Repo
 				logger.Logger.Error("Error GetDeploymentByName", zap.Any("err:", err.Error()))
 				continue
 			}
-			if deploymentInfo != nil && utils.GetDockertagFromURL(deploymentInfo.Image) != releaseInfo[0].Releases[0].TagName {
+			if deploymentInfo != nil && utils.GetDockertagFromURL(deploymentInfo.Image) != releaseInfo[0].Releases.TagName {
 				deploymentInfo.OutOfSync = true
 			}
 			// Append deployment data to the repo response

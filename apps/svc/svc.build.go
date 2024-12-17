@@ -73,46 +73,56 @@ func (svc BuildService) GetReleaseInfo(repoURLs []string, topK int) ([]model_bui
 	// Iterate over each repository URL
 	for _, repoURL := range repoURLs {
 		// Build the GitHub API URL for releases
-		apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases", repoURL)
+		apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repoURL)
 		// Send HTTP GET request to GitHub API
 		resp, err := http.Get(apiURL)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch releases for %s: %w", repoURL, err)
+			fmt.Println("error is 80", err)
+			continue
+			// return nil, fmt.Errorf("failed to fetch releases for %s: %w", repoURL, err)
 		}
 		defer resp.Body.Close()
 
 		// Check the HTTP status code
 		if resp.StatusCode != 200 {
-			return nil, fmt.Errorf("unexpected status code %d for %s", resp.StatusCode, repoURL)
+			fmt.Println("the error is ", resp)
+			fmt.Println("error message is ", resp.Body)
+			continue
+			// return nil, fmt.Errorf("unexpected status code %d for %s and %s", resp.StatusCode, repoURL, resp)
 		}
 
 		// Log the body for debugging
-		body, err := io.ReadAll(resp.Body)
+		body1, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read response body for %s: %w", repoURL, err)
+			fmt.Println("error is 97", err)
+			continue
+
+			// return nil, fmt.Errorf("failed to read response body for %s: %w", repoURL, err)
 		}
 
 		// Decode the response
-		var releases []model_build.ReleaseInfo
-		if err := json.Unmarshal(body, &releases); err != nil {
-			return nil, fmt.Errorf("failed to decode response for %s: %w", repoURL, err)
+		var releases model_build.ReleaseInfo
+		if err := json.Unmarshal(body1, &releases); err != nil {
+			fmt.Println("error is 105", err)
+			continue
+			// return nil, fmt.Errorf("failed to decode response for %s: %w", repoURL, err)
 		}
 
-		// Select the top K releases
-		var topReleases []model_build.ReleaseInfo
-		for i, release := range releases {
-			if i >= topK {
-				break
-			}
+		// // Select the top K releases
+		// var topReleases []model_build.ReleaseInfo
+		// for i, release := range releases {
+		// 	if i >= topK {
+		// 		break
+		// 	}
 
-			// Add the release to the topReleases slice
-			topReleases = append(topReleases, release)
-		}
+		// 	// Add the release to the topReleases slice
+		// 	topReleases = append(topReleases, release)
+		// }
 
 		// Append to the result with the formatted repo info
 		result = append(result, model_build.RepoReleases{
 			RepoURL:  "https://github.com/" + repoURL, // Keep the repository URL for reference
-			Releases: topReleases,                     // Append the top releases for the repo
+			Releases: releases,                        // Append the top releases for the repo
 		})
 	}
 
