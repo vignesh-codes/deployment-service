@@ -71,8 +71,12 @@ func (svc DeploymentService) GetDeploymentsByNamespace(namespace string) ([]map[
 
 func (svc DeploymentService) GetTenantKubernetesInfo(namespace string) (model_build.TenantResourceResp, error) {
 	var resp = model_build.TenantResourceResp{}
-
-	_ = svc.repository.Kubernetes.CreateNamespaceIfNotExists(namespace)
+	// Create Namespace if not exists
+	nserr := svc.repository.Kubernetes.CreateNamespaceIfNotExists(namespace)
+	if nserr != nil {
+		fmt.Println("Error creating namespace %s: %v", namespace, nserr)
+		return resp, nserr
+	}
 	// Fetch Pods
 	pods, err := svc.repository.Kubernetes.ListPods(namespace)
 	if err != nil {
